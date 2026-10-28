@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Palia自己紹介カードメーカー | 海月商店</title>
+<style>
+  :root { --foam:#eaf6f6; --gold:#ffd98a; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:"Hiragino Maru Gothic ProN","Hiragino Sans","Noto Sans JP",sans-serif; background:#0d1b29; color:var(--foam); }
+  header { padding:14px 16px 4px; text-align:center; }
+  header h1 { font-size:20px; margin:4px 0; letter-spacing:.05em; }
+  header p { font-size:12px; opacity:.8; margin:2px 0 8px; }
+  main { max-width:640px; margin:0 auto; padding:8px 14px 30px; }
+  .card-preview { width:100%; border-radius:14px; box-shadow:0 8px 30px rgba(0,0,0,.5); display:block; }
+  fieldset { border:1px solid rgba(255,255,255,.18); border-radius:12px; margin:14px 0; padding:10px 12px 12px; }
+  legend { font-size:13px; padding:0 6px; color:var(--gold); }
+  label { display:block; font-size:12px; opacity:.85; margin:8px 0 4px; }
+  input[type=text], textarea { width:100%; padding:9px 10px; border-radius:8px; border:1px solid rgba(255,255,255,.25); background:rgba(255,255,255,.08); color:#fff; font-size:15px; }
+  textarea { min-height:52px; resize:vertical; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
+  .chip { padding:6px 12px; border-radius:999px; border:1px solid rgba(255,255,255,.35); font-size:13px; cursor:pointer; user-select:none; background:rgba(255,255,255,.05); }
+  .chip.on { background:#f7a8b8; color:#40222b; border-color:#f7a8b8; font-weight:700; }
+  .chip.blue.on { background:#8fd0e8; color:#12303d; border-color:#8fd0e8; }
+  button.main { width:100%; padding:14px; font-size:16px; font-weight:700; border:none; border-radius:12px; background:linear-gradient(90deg,#57b6d9,#f7a8b8); color:#12222e; cursor:pointer; margin-top:8px; }
+  .hint { font-size:11px; opacity:.65; text-align:center; margin-top:10px; line-height:1.6; }
+  input[type=file] { color:#cfe; font-size:13px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Palia 自己紹介カードメーカー</h1>
+  <p>入力すると下のカードがそのまま変わります。スクショを入れて「画像を保存」→ Discordに貼るだけ。</p>
+</header>
+<main>
+  <canvas id="cv" class="card-preview" width="1200" height="630"></canvas>
+
+  <fieldset>
+    <legend>基本情報</legend>
+    <label>プレイヤー名</label>
+    <input type="text" id="f_name" value="じぇりーえふぃら">
+    <label>プレイ時間帯</label>
+    <input type="text" id="f_time" value="不定期・深夜多め">
+    <label>プレイ環境</label>
+    <div class="chips" id="f_env">
+      <span class="chip blue on">PC</span><span class="chip blue">Switch</span><span class="chip blue">PS5</span><span class="chip blue">Xbox</span>
+    </div>
+    <label>フレンド申請</label>
+    <div class="chips" id="f_friend">
+      <span class="chip on">歓迎！</span><span class="chip">要相談</span><span class="chip">お休み中</span>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>プレイスタイル（いくつでも）</legend>
+    <div class="chips" id="f_style">
+      <span class="chip on">のんびり</span><span class="chip on">雑談</span><span class="chip">効率重視</span><span class="chip">ソロ中心</span><span class="chip">パーティ中心</span><span class="chip on">ハウジング</span><span class="chip">料理</span><span class="chip">釣り</span><span class="chip">虫取り</span><span class="chip">採集</span><span class="chip">狩猟</span><span class="chip">ホームツアー</span>
+    </div>
+    <label>コミュニケーション</label>
+    <div class="chips" id="f_comm">
+      <span class="chip blue on">ゲーム内チャット</span><span class="chip blue">VC聞き専</span><span class="chip blue">VC声出しOK</span><span class="chip blue on">配信で読み上げ</span>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>お気に入り・ひとこと</legend>
+    <label>推し住民</label>
+    <input type="text" id="f_oshi" value="">
+    <label>好きな衣装・家具など</label>
+    <input type="text" id="f_fav" value="">
+    <label>ひとこと</label>
+    <textarea id="f_word">のんびりパリアイフしてます。配信で会いましょう！</textarea>
+    <label>スクショ（任意・左側に表示）</label>
+    <input type="file" id="f_img" accept="image/*">
+  </fieldset>
+
+  <button class="main" id="dl">📥 画像を保存する</button>
+  <p class="hint">保存した画像を Discord の #自己紹介 に貼れば完成です。<br>by 海月商店</p>
+</main>
+
+<script>
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+const W = 1200, H = 630;
+let shot = null;
+
+function rr(x, y, w, h, r) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); }
+function panel(x, y, w, h) { rr(x, y, w, h, 16); ctx.fillStyle = 'rgba(255,255,255,0.88)'; ctx.fill(); }
+function label(x, y, t) { ctx.fillStyle = '#5b7a8c'; ctx.font = '600 18px sans-serif'; ctx.fillText(t, x, y); }
+function fit(x, y, t, maxW, base, min) {
+  let s = base; ctx.fillStyle = '#1d3444';
+  ctx.font = '700 ' + s + 'px sans-serif';
+  while (s > min && ctx.measureText(t).width > maxW) { s -= 1; ctx.font = '700 ' + s + 'px sans-serif'; }
+  ctx.fillText(t, x, y);
+}
+function fitWrap(t, x, y, maxW, lh, base, maxLines) {
+  let s = base;
+  while (s > 14) {
+    ctx.font = '700 ' + s + 'px sans-serif';
+    const lines = []; let line = '';
+    for (const ch of t) { if (ctx.measureText(line + ch).width > maxW && line) { lines.push(line); line = ch; } else line += ch; }
+    if (line) lines.push(line);
+    if (lines.length <= maxLines) { ctx.fillStyle = '#1d3444'; lines.forEach((ln, i) => ctx.fillText(ln, x, y + i * lh)); return; }
+    s -= 1;
+  }
+  ctx.fillStyle = '#1d3444'; ctx.font = '700 14px sans-serif'; ctx.fillText(t, x, y);
+}
+// Draw selected items as pill tags flowing into rows; a pill never splits across lines
+function pills(items, x, y, maxW, o) {
+  o = o || {};
+  const fs = o.font || 20, ph = o.h || 30, pitch = o.pitch || 32, maxRow = o.maxRow || 3;
+  ctx.font = '700 ' + fs + 'px sans-serif';
+  let cx = x, cy = y, row = 0;
+  for (const t of items) {
+    const w = ctx.measureText(t).width + 26;
+    if (cx + w > x + maxW) { cx = x; cy += pitch; row++; }
+    if (row >= maxRow) break;
+    rr(cx, cy, w, ph, ph / 2); ctx.fillStyle = o.fill || '#fbe3ea'; ctx.fill();
+    ctx.strokeStyle = o.stroke || '#e58aa0'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = o.color || '#5c2f3d'; ctx.fillText(t, cx + 13, cy + ph - 8);
+    cx += w + 8;
+  }
+  if (!items.length) { ctx.fillStyle = '#1d3444'; ctx.font = '700 22px sans-serif'; ctx.fillText('—', x, y + 22); }
+}
+function jelly(x, y, s, color) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+  ctx.beginPath(); ctx.arc(0, 0, 30, Math.PI, 0); ctx.quadraticCurveTo(30, 16, 18, 18); ctx.quadraticCurveTo(9, 10, 4, 18); ctx.quadraticCurveTo(0, 10, -4, 18); ctx.quadraticCurveTo(-9, 10, -18, 18); ctx.quadraticCurveTo(-30, 16, -30, 0); ctx.closePath();
+  ctx.fillStyle = color; ctx.fill();
+  ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  for (const dx of [-16, 0, 16]) { ctx.beginPath(); ctx.moveTo(dx, 20); ctx.quadraticCurveTo(dx + 5, 34, dx, 46); ctx.stroke(); }
+  ctx.restore();
+}
+function pick(id) { return [...document.querySelectorAll('#' + id + ' .chip.on')].map(c => c.textContent); }
+function pickOne(id) { const p = pick(id); return p.length ? p[0] : ''; }
+const val = id => document.getElementById(id).value;
+
+function draw() {
+  const g = ctx.createLinearGradient(0, 0, W, H);
+  g.addColorStop(0, '#16334d'); g.addColorStop(.55, '#1d4e5f'); g.addColorStop(1, '#2a6b7a');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = 'rgba(255,255,255,0.10)';
+  for (const [x, y, r] of [[80,120,14],[150,60,9],[1080,90,12],[1140,180,8],[60,520,10],[1120,540,13],[980,560,7]]) { ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); }
+  jelly(1140, 52, 0.9, 'rgba(247,168,184,0.8)');
+  ctx.fillStyle = '#ffd98a'; ctx.font = '700 26px sans-serif'; ctx.fillText('Palia 自己紹介', 40, 48);
+  // left column
+  panel(40, 76, 380, 380);
+  if (shot) {
+    ctx.save(); rr(48, 84, 364, 364, 12); ctx.clip();
+    const sc = Math.max(364 / shot.width, 364 / shot.height);
+    ctx.drawImage(shot, 48 + (364 - shot.width * sc) / 2, 84 + (364 - shot.height * sc) / 2, shot.width * sc, shot.height * sc);
+    ctx.restore();
+  } else {
+    ctx.fillStyle = '#8fa9b5'; ctx.font = '600 22px sans-serif'; ctx.fillText('スクショを入れると', 110, 250); ctx.fillText('ここに表示されます', 110, 284);
+  }
+  panel(40, 472, 380, 118);
+  label(62, 506, 'プレイヤー名');
+  fit(62, 556, val('f_name') || '—', 336, 38, 20);
+  // right column — rows: 84 / 118 / 124 / 58 / 92 with 12px gaps, 76..600
+  const RX = 448, RW = 712, HALF = 330;
+  panel(RX, 76, RW, 84);
+  label(RX + 22, 102, 'プレイ時間帯'); fit(RX + 22, 142, val('f_time') || '—', HALF, 27, 16);
+  label(RX + 380, 102, 'プレイ環境'); fit(RX + 380, 142, pick('f_env').join('・') || '—', HALF, 27, 16);
+  panel(RX, 172, RW, 118);
+  label(RX + 22, 200, 'フレンド申請'); fit(RX + 22, 252, pickOne('f_friend'), HALF, 30, 18);
+  label(RX + 380, 200, 'コミュニケーション');
+  pills(pick('f_comm'), RX + 380, 212, HALF, { font: 18, h: 28, pitch: 32, maxRow: 2, fill: '#dff2fa', stroke: '#7fb8d4', color: '#173d4d' });
+  panel(RX, 302, RW, 124);
+  label(RX + 22, 328, 'プレイスタイル');
+  pills(pick('f_style'), RX + 22, 334, RW - 44, { pitch: 30 });
+  panel(RX, 438, RW, 58);
+  label(RX + 22, 464, '推し住民'); fit(RX + 110, 468, val('f_oshi') || '—', 250, 23, 15);
+  label(RX + 372, 464, '好きな衣装・家具'); fit(RX + 520, 468, val('f_fav') || '—', 168, 23, 15);
+  panel(RX, 508, RW, 92);
+  label(RX + 22, 534, 'ひとこと');
+  fitWrap(val('f_word') || '', RX + 22, 568, RW - 44, 28, 23, 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '600 16px sans-serif';
+  ctx.fillText('海月商店', 40, 618);
+}
+
+document.querySelectorAll('.chips').forEach(group => {
+  const single = (group.id === 'f_friend');
+  group.addEventListener('click', e => {
+    if (!e.target.classList.contains('chip')) return;
+    if (single) { group.querySelectorAll('.chip').forEach(c => c.classList.remove('on')); e.target.classList.add('on'); }
+    else e.target.classList.toggle('on');
+    draw();
+  });
+});
+document.querySelectorAll('input[type=text], textarea').forEach(el => el.addEventListener('input', draw));
+document.getElementById('f_img').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) return;
+  const img = new Image();
+  img.onload = () => { shot = img; draw(); };
+  img.src = URL.createObjectURL(f);
+});
+document.getElementById('dl').addEventListener('click', () => {
+  const a = document.createElement('a');
+  a.download = 'palia-profile-card.png';
+  a.href = cv.toDataURL('image/png');
+  a.click();
+});
+draw();
+</script>
+</body>
+</html>
